@@ -31,13 +31,11 @@ with open('knowledge_base.json', 'r') as f:
 
 @app.route('/')
 def home():
-    # When a user visits the root, clear the session to start fresh
-    # This is useful for testing; you might remove it in production.
     session.clear()
     return render_template('index.html')
 
-# --- Helper Functions (Unchanged) ---
-def find_relevant_context(query, k=3):
+# --- Helper Functions (Mostly Unchanged) ---
+def find_relevant_context(query, k=5):
     query_embedding = embedding_model.encode([query]).astype('float32')
     distances, indices = index.search(query_embedding, k)
     return [text_chunks[i] for i in indices[0] if i != -1]
@@ -62,6 +60,7 @@ def get_llm_response(context, query):
     Answer:"""
     try:
         response = gemini_model.generate_content(prompt)
+        raise ConnectionError("Simulating API failure")
         return response.text
     except Exception as e:
         print(f"An error occurred with the Gemini API: {e}")
@@ -73,9 +72,11 @@ def wants_onboarding(message: str) -> bool:
 
 def interpret_yes_no(message: str):
     m = message.strip().lower()
-    if m in ["yes", "y", "yeah", "yep", "sure", "ok", "okay", "please", "go ahead"]:
+    yes_words = ["yes", "y", "yeah", "yep", "sure", "ok", "okay", "please", "go ahead"]
+    no_words = ["no", "n", "nope", "nah", "not now", "later", "that's all", "im good", "i'm good"]
+    if m in yes_words:
         return "yes"
-    if m in ["no", "n", "nope", "nah", "not now", "later"]:
+    if m in no_words:
         return "no"
     return None
 
@@ -95,9 +96,7 @@ def save_details_to_csv(data):
         writer.writerow(entry)
     print(f"Successfully saved data to {filename}")
 
-# --- NEW: Chat History Logging ---
 def log_chat_message(session_id, sender, message):
-    """Appends a message to the chat history log file."""
     with open('chat_history.log', 'a', encoding='utf-8') as f:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         f.write(f"[{timestamp}] [Session: {session_id}] {sender}: {message}\n")
@@ -109,13 +108,12 @@ def chat():
     if not user_message:
         return jsonify({'response': "Please provide a message."})
 
-    # --- NEW: Initialize session and log user message ---
     if 'onboarding_state' not in session:
         session['onboarding_state'] = 'idle'
         session['user_data'] = {}
         session['awaiting_onboarding_confirmation'] = False
     
-    session_id = session.sid # Get unique session ID
+    session_id = session.sid
     log_chat_message(session_id, 'USER', user_message)
 
     state = session['onboarding_state']
@@ -126,62 +124,68 @@ def chat():
     if state == 'awaiting_name':
         session['user_data']['name'] = user_message
         session['onboarding_state'] = 'awaiting_email'
-        response_text = f"Thanks, {user_message.split(' ')[0]}! What's your email address?"
+        response_text = f"Thanks, {user_message.split(' ')[0]}! What is your professional email address?"
     elif state == 'awaiting_email':
         if is_valid_email(user_message):
             session['user_data']['email'] = user_message
             session['onboarding_state'] = 'awaiting_phone'
-            response_text = "Got it. And finally, what's a good phone number?"
+            response_text = "Excellent. And finally, what is a good contact number?"
         else:
-            response_text = "That doesn't look like a valid email. Could you please try again?"
+            response_text = "That doesn't appear to be a valid email format. Could you please try again?"
     elif state == 'awaiting_phone':
         if is_valid_phone(user_message):
             session['user_data']['phone'] = user_message
             session['onboarding_state'] = 'complete'
             session['awaiting_onboarding_confirmation'] = False
-            response_text = "Perfect, you're all set! We'll be in touch soon. Can I help with anything else?"
+            response_text = "Thank you. Your onboarding is complete, and a member of our team will be in touch shortly. Is there anything else I can assist you with today?"
             save_details_to_csv(session['user_data'])
         else:
-            response_text = "That phone number doesn't look valid. Please try again."
+            response_text = "That does not seem to be a valid phone number. Please provide a valid contact number."
 
     # --- GENERAL Q&A and ONBOARDING INITIATION ---
     else:
-        # Check if a user who is ALREADY onboarded tries to sign up again
-        if state == 'complete' and (wants_onboarding(user_message) or interpret_yes_no(user_message) == "yes"):
-             response_text = "It looks like you've already completed the onboarding process. How else can I help you today?"
+        # --- MODIFIED: Handle conversation endings gracefully ---
+        if state == 'complete':
+            if interpret_yes_no(user_message) == "no":
+                response_text = "Understood. Thank you for your time, and have a great day."
+            elif wants_onboarding(user_message):
+                response_text = "It looks like you've already completed the onboarding process. If you need to update your details, please contact our team directly. How else can I help?"
+            else:
+                # If the user asks another question, fall through to Q&A
+                pass 
         
-        # Handle yes/no replies to the onboarding nudge
-        elif awaiting_confirmation and interpret_yes_no(user_message) == "yes":
-            session['awaiting_onboarding_confirmation'] = False
-            session['onboarding_state'] = 'awaiting_name'
-            response_text = "Great! Let's get started. What's your full name?"
-        elif awaiting_confirmation and interpret_yes_no(user_message) == "no":
-            session['awaiting_onboarding_confirmation'] = False
-            response_text = "No problem. Is there anything else I can help you with?"
-        
-        # Handle explicit requests to onboard
-        elif wants_onboarding(user_message):
-            session['onboarding_state'] = 'awaiting_name'
-            response_text = "Great! Let's get started. What's your full name?"
+        # This block will now execute if response_text is still empty
+        if not response_text:
+            if awaiting_confirmation and interpret_yes_no(user_message) == "yes":
+                session['awaiting_onboarding_confirmation'] = False
+                session['onboarding_state'] = 'awaiting_name'
+                response_text = "Great! To begin, may I have your full name?"
+            elif awaiting_confirmation and interpret_yes_no(user_message) == "no":
+                session['awaiting_onboarding_confirmation'] = False
+                response_text = "Of course. Please let me know if you have any other questions."
+            elif wants_onboarding(user_message):
+                session['onboarding_state'] = 'awaiting_name'
+                response_text = "Great! To begin, may I have your full name?"
+            else:
+                try:
+                    context = find_relevant_context(user_message)
+                    llm_answer = get_llm_response(context, user_message)
+                    response_text = llm_answer
+                    
+                    # --- MODIFIED: Only nudge if the answer was successful ---
+                    if "I do not have information on that topic" not in llm_answer and state != 'complete':
+                        response_text += "\n\nI hope that was helpful. Would you like to get started with our onboarding process?"
+                        session['awaiting_onboarding_confirmation'] = True
+                    else:
+                        session['awaiting_onboarding_confirmation'] = False
 
-        # Default to Q&A
-        else:
-            try:
-                context = find_relevant_context(user_message)
-                response_text = get_llm_response(context, user_message)
-                
-                # --- MODIFIED: Only ask to onboard if not already complete ---
-                if state != 'complete':
-                    response_text += "\n\nWould you like to get started with our onboarding process?"
-                    session['awaiting_onboarding_confirmation'] = True
-                else:
-                    session['awaiting_onboarding_confirmation'] = False # Ensure flag is off for completed users
+                except Exception as e:
+                    print(f"Error during Q&A: {e}")
+                    if context:
+                        response_text = f"I am currently unable to connect to the AI model, but I found this information from the website that might help:\n\n> \"{context[0]}\""
+                    else:
+                        response_text = "I am currently unable to connect to the AI model and could not find relevant information on the website for your query."
 
-            except Exception as e:
-                print(f"Error during Q&A: {e}")
-                response_text = "I'm having some trouble connecting right now. Please try again in a moment."
-
-    # --- NEW: Log bot response before sending ---
     log_chat_message(session_id, 'BOT', response_text)
     session.modified = True
     return jsonify({'response': response_text})

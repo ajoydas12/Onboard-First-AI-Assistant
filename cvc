@@ -1,0 +1,100 @@
+Here's a concise guide and script for creating your 3-minute demo video.
+
+---
+
+### ## **Preparation**
+
+1.  **Run the Scraper:** Make sure you have the `knowledge_base.json` and `knowledge_base.index` files generated and ready to show.
+2.  **Start the App:** Have your Flask application running in a terminal window.
+3.  **Open Windows:** Arrange your screen with three windows visible:
+    * Your code editor (showing `app.py` and the file explorer).
+    * The terminal where the app is running.
+    * Your web browser open to the chatbot page.
+
+---
+
+### ## **Video Script (≤ 3 Minutes)**
+
+**(Scene: Start with the code editor in focus.)**
+
+**[0:00 - 0:20] The Scrape Results & Knowledge Base**
+
+"Hi, this is a quick demo of the Onboard-First AI Assistant. Before starting, I ran a scraper on the Occams Advisory website. It produced two key files:"
+
+*(Point to `knowledge_base.json`)*
+
+"First, a JSON file containing all the clean text content from the site. This is our ground truth."
+
+*(Point to `knowledge_base.index`)*
+
+"And second, a FAISS index file. This is a vector database that lets the bot understand the meaning behind the text and find relevant information instantly. Together, these form the bot's local brain."
+
+---
+
+**(Scene: Switch focus to the web browser with the chatbot.)**
+
+**[0:20 - 1:15] Q&A and Conversational Nudge**
+
+"Now, let's chat with the assistant. I'll ask a question directly related to the company."
+
+*(Type and send: "What are your core services?")*
+
+"As you can see, the bot gives a perfectly accurate answer pulled directly from the knowledge base we just saw. After answering, it nudges me to start the onboarding process. This conversational flow is key."
+
+"It can also handle general knowledge questions."
+
+*(Type and send: "What is the capital of India?")*
+
+"It correctly answers New Delhi and, because I haven't onboarded yet, it nudges me again. Now, let's accept."
+
+---
+
+**(Scene: Continue the chat in the browser.)**
+
+**[1:15 - 2:10] Completing the Onboarding Flow**
+
+"I'll reply with 'yes' to start the process."
+
+*(Type and send: "yes")*
+
+"The bot asks for my name."
+
+*(Type and send: "Alex Rai")*
+
+"Now my email."
+
+*(Type and send: "alex.rai@email.com")*
+
+"And finally, a phone number."
+
+*(Type and send: "+919876543210")*
+
+"And just like that, the onboarding is complete. If we look at the project files..."
+
+*(Switch to the code editor's file explorer and open `onboarding_details.csv`)*
+
+"A new CSV file has been created, and my details have been saved locally with a timestamp. This data was never sent to a third-party LLM."
+
+---
+
+**(Scene: Switch back to the code editor, focusing on `app.py`.)**
+
+**[2:10 - 2:50] Showing a Failure Mode**
+
+"What happens if the main AI—the Gemini API—is down? I'll simulate this by modifying the code to throw an error, forcing the fallback."
+
+*(In `get_llm_response`, add a line like `raise ConnectionError("Simulating API failure")` and save the file. The server will auto-reload.)*
+
+"The server has reloaded. Now, back in the chat, I'll ask the same question as before."
+
+*(Switch to the browser and send: "What are your core services?")*
+
+"Instead of crashing, the app degrades gracefully. It tells me it's having trouble connecting and provides the most relevant raw information it found in its local knowledge base. The assistant remains helpful even when partially offline."
+
+---
+
+**(Scene: Back to the chat interface for the outro.)**
+
+**[2:50 - 3:00] Conclusion**
+
+"So, that's a quick look at the assistant—it provides grounded answers, seamlessly onboards new clients, and is resilient to failure. Thanks for watching."

@@ -1,9 +1,95 @@
 
+
 -----
 
 # Onboard-First AI Assistant
 
 This repository contains the source code for a minimal, end-to-end AI assistant for Occams Advisory. The assistant is designed to answer questions based on the company's website and to onboard prospective clients by collecting their contact information in a secure, conversational manner.
+
+-----
+
+## Getting Started 🚀
+
+Follow these steps to set up and run the application on your local machine.
+
+### Prerequisites
+
+  * Python 3.8+
+  * pip (Python package installer)
+
+### 1\. Clone the Repository
+
+```bash
+git clone <your-repository-url>
+cd onboard-first-ai-assistant
+```
+
+### 2\. Set Up a Virtual Environment
+
+It's highly recommended to use a virtual environment to manage project dependencies.
+
+```bash
+# Create the virtual environment
+python -m venv venv
+
+# Activate it (macOS/Linux)
+source venv/bin/activate
+
+# Activate it (Windows)
+.\venv\Scripts\activate
+```
+
+### 3\. Install Dependencies
+
+Install all required Python libraries from the `requirements.txt` file.
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4\. Set Up Your API Key
+
+The application uses the Google Gemini API. You'll need to provide your API key.
+
+1.  Create a file named `.env` in the root of the project directory.
+2.  Add your API key to this file in the following format:
+    ```
+    GEMINI_API_KEY="your_actual_api_key_here"
+    ```
+
+### 5\. Generate the Knowledge Base
+
+Before running the app for the first time, you must run the scraper to create the local knowledge base from the Occams Advisory website.
+
+```bash
+python scrape.py
+```
+
+This will create `knowledge_base.json` and `knowledge_base.index` in your project directory.
+
+### 6\. Run the Application
+
+You can now start the Flask web server.
+
+```bash
+flask run
+```
+
+Open your web browser and navigate to **[http://127.0.0.1:5000](https://www.google.com/search?q=http://127.0.0.1:5000)** to start chatting with the assistant.
+
+-----
+
+## Running the Tests 🧪
+
+A suite of tests is included to verify the core functionality of the application. The tests use mocking to avoid making real API calls, ensuring they are fast and can be run without an active API key.
+
+To run the tests, execute the following command in your terminal:
+
+```bash
+python -m unittest test_app.py
+```
+
+The test suite covers PII validation logic, the full onboarding flow, and ensures the application degrades gracefully when external services fail.
 
 -----
 
