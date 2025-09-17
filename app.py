@@ -144,7 +144,6 @@ def chat():
 
     # --- GENERAL Q&A and ONBOARDING INITIATION ---
     else:
-        # --- MODIFIED: Handle conversation endings gracefully ---
         if state == 'complete':
             if interpret_yes_no(user_message) == "no":
                 response_text = "Understood. Thank you for your time, and have a great day."
